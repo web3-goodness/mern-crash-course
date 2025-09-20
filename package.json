@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "NODE_ENV=development nodemon backend/server.js",
     "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
-
     "start": "NODE_ENV=production node backend/server.js"
   },
   "type": "module",
@@ -14,9 +13,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1"
   },
   "devDependencies": {

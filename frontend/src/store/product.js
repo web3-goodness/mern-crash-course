@@ -1,63 +1,114 @@
+// frontend/src/store/product.js
+// frontend/src/store/product.js
 import { create } from "zustand";
+
+// Define backend base URL
+const BASE_URL = "http://localhost:5000";
 
 export const useProductStore = create((set) => ({
   products: [],
+
+  // Fetch all products (public route)
+  fetchProducts: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/products`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Failed to fetch products");
+
+      set({ products: data.data || [] });
+    } catch (err) {
+      console.error("❌ Fetch products error:", err.message);
+    }
+  },
+
+  // Create a new product (protected)
   createProduct: async (product) => {
     try {
-      // ⚠️ Make sure your backend runs on port 3000 (or change accordingly)
-      const res = await fetch("/api/products", {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const token = user?.token;
+
+      const res = await fetch(`${BASE_URL}/api/products`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(product),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          ...product,
+          price: parseFloat(product.price) || 0, // ensure price is a number
+        }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        return { success: false, message: `Server error: ${text}` };
-      }
-
       const data = await res.json();
-      set((state) => ({ products: [...state.products, data] }));
+      if (!res.ok) return { success: false, message: data.message || "Server error" };
+
+      set((state) => ({ products: [...state.products, data.data] }));
+
       return { success: true, message: "Product created successfully" };
     } catch (err) {
       return { success: false, message: err.message };
     }
   },
-  fetchProducts: async () => {
-    const res = await fetch("/api/products");
-    const data = await res.json();
-    set({ products: data.data });
-  },
+
+  // Delete a product (protected)
   deleteProduct: async (pid) => {
-    const res = await fetch(`/api/products/${pid}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    if(!data.success) {
-      return {success:false, message:data.message}
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const token = user?.token;
+
+      const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token || ""}` },
+      });
+
+      const data = await res.json();
+      if (!data.success) return { success: false, message: data.message };
+
+      set((state) => ({
+        products: state.products.filter((product) => product._id !== pid),
+      }));
+
+      return { success: true, message: "Product deleted successfully" };
+    } catch (err) {
+      return { success: false, message: err.message };
     }
-    set((state) => ({ products: state.products.filter(product => product._id !== pid) }));
-    return { success:true, message: data.message };
   },
+
+  // Update a product (protected)
   updateProduct: async (pid, updatedProduct) => {
-    const res = await fetch(`/api/products/${pid}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedProduct),
-    });
-    const data = await res.json();
-    if(!data.success) {
-      return {success:false, message:data.message}
-    };
-    set((state) => ({
-      products: state.products.map((product) =>
-        product._id === pid ? data.data : product
-      ),
-    }));
-    return { success:true, message: data.message };
-  }
-  
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const token = user?.token;
+
+      const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          ...updatedProduct,
+          price: parseFloat(updatedProduct.price) || 0, // ensure price is a number
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) return { success: false, message: data.message };
+
+      set((state) => ({
+        products: state.products.map((product) =>
+          product._id === pid ? data.data : product
+        ),
+      }));
+
+      return { success: true, message: "Product updated successfully" };
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  },
 }));
+
 
 
 

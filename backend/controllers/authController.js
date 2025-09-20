@@ -1,0 +1,190 @@
+// backend/controllers/authController.js
+import User from "../models/User.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+// Helper to generate token
+const generateToken = (id, role) => {
+  return jwt.sign(
+    { id, role },
+    process.env.JWT_SECRET || "devsecret",
+    { expiresIn: "1d" }
+  );
+};
+
+// SIGNUP - hashes password automatically via User model
+export const signup = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // If first user in DB, make admin; otherwise user
+    const userCount = await User.countDocuments();
+    const role = userCount === 0 ? "admin" : "user";
+
+    const user = new User({
+      username,
+      email,
+      password, // hashed automatically
+      role,
+    });
+    await user.save();
+
+    const token = generateToken(user._id, user.role);
+
+    res.status(201).json({
+      message: `User created successfully as ${role}`,
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// LOGIN - compares hashed password
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Compare hashed password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = generateToken(user._id, user.role);
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// LOGOUT - client removes token
+export const logout = async (req, res) => {
+  try {
+    res.json({ message: "Logged out successfully. Please clear token on client." });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
+// // backend/controllers/authController.js
+// import User from "../models/User.js";
+// import jwt from "jsonwebtoken";
+
+// // Helper to generate token
+// const generateToken = (id, role) => {
+//   return jwt.sign(
+//     { id, role },
+//     process.env.JWT_SECRET || "devsecret",
+//     { expiresIn: "1d" }
+//   );
+// };
+
+// // SIGNUP (plain-text password - testing only ❌ DO NOT USE IN PRODUCTION)
+// export const signup = async (req, res) => {
+//   try {
+//     const { username, email, password } = req.body;
+
+//     // Check if user exists
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: "User already exists" });
+//     }
+
+//     // Save user with plain-text password
+//     const user = new User({
+//       username,
+//       email,
+//       password, // ⚠️ plain-text for now
+//       role: "user",
+//     });
+//     await user.save();
+
+//     const token = generateToken(user._id, user.role);
+
+//     res.status(201).json({
+//       message: "User created successfully (plain-text password - testing only)",
+//       token,
+//       user: {
+//         id: user._id,
+//         username: user.username,
+//         email: user.email,
+//         role: user.role,
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
+// // LOGIN (plain-text compare - testing only ❌ DO NOT USE IN PRODUCTION)
+// export const login = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     // Find user
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     // Plain-text comparison
+//     if (user.password !== password) {
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     const token = generateToken(user._id, user.role);
+
+//     res.json({
+//       message: "Login successful",
+//       token,
+//       user: {
+//         id: user._id,
+//         username: user.username,
+//         email: user.email,
+//         role: user.role,
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
+// // LOGOUT (JWT-based -> client must clear token)
+// export const logout = async (req, res) => {
+//   try {
+//     // With JWT, logout is handled client-side by removing token
+//     res.json({ message: "Logged out successfully. Please clear token on client." });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };

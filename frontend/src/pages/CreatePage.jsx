@@ -1,64 +1,82 @@
+// frontend/src/pages/CreatePage.jsx
 import { Container, useColorModeValue, useToast } from "@chakra-ui/react";
 import { useState } from "react";
 import { VStack, Heading, Button, Box, Input } from "@chakra-ui/react";
 import { useProductStore } from "../store/product";
+import { useNavigate } from "react-router-dom";
 
 const CreatePage = () => {
   const [newProduct, setNewProduct] = useState({
     name: "",
-    price: "",
-    image: ""
+    price: "", // keep as string for controlled input
+    image: "",
   });
+
   const toast = useToast();
-
-
+  const navigate = useNavigate();
   const { createProduct } = useProductStore();
 
   const handleAddProduct = async () => {
-    try {
-      const { success, message } = await createProduct(newProduct);
-      if (!success) {
-        toast({
-          title: "Error",
-          description: message,
-          status: "error",
-          isClosable: true
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: message,
-          status: "success",
-          isClosable: true
-        });
-        setNewProduct({ name: "", price: "", image: "" });
-      }
-          
-      
+    // Validation: ensure all fields filled
+    if (!newProduct.name || newProduct.price === "" || !newProduct.image) {
+      toast({
+        title: "Error",
+        description: "Please fill all fields",
+        status: "error",
+        isClosable: true,
+      });
+      return;
+    }
 
-    } catch (error) {
-      console.error("Error creating product:", error);
+    const priceValue = parseFloat(newProduct.price);
+
+    // Ensure price is a valid number
+    if (isNaN(priceValue) || priceValue <= 0) {
+      toast({
+        title: "Error",
+        description: "Price must be a valid number greater than 0",
+        status: "error",
+        isClosable: true,
+      });
+      return;
+    }
+
+    const { success, message } = await createProduct({
+      name: newProduct.name,
+      price: priceValue,
+      image: newProduct.image,
+    });
+
+    toast({
+      title: success ? "Success" : "Error",
+      description: message,
+      status: success ? "success" : "error",
+      isClosable: true,
+    });
+
+    if (success) {
+      setNewProduct({ name: "", price: "", image: "" });
+      navigate("/"); // redirect to homepage
     }
   };
 
   return (
-    <Container maxW={"container.sm"}>
+    <Container maxW="container.sm" py={12}>
       <VStack spacing={8}>
-        <Heading as={"h1"} size={"2xl"} textAlign={"center"} mb={8}>
+        <Heading as="h1" size="2xl" textAlign="center">
           Create New Product
         </Heading>
 
         <Box
-          w={"full"}
+          w="full"
           bg={useColorModeValue("white", "gray.800")}
           p={6}
-          rounded={"lg"}
-          shadow={"md"}
+          rounded="lg"
+          shadow="md"
         >
           <VStack spacing={4}>
             <Input
               placeholder="Product Name"
-              name="name"
               value={newProduct.name}
               onChange={(e) =>
                 setNewProduct({ ...newProduct, name: e.target.value })
@@ -66,7 +84,7 @@ const CreatePage = () => {
             />
             <Input
               placeholder="Price"
-              name="price"
+              type="number"
               value={newProduct.price}
               onChange={(e) =>
                 setNewProduct({ ...newProduct, price: e.target.value })
@@ -74,13 +92,12 @@ const CreatePage = () => {
             />
             <Input
               placeholder="Image URL"
-              name="image"
               value={newProduct.image}
               onChange={(e) =>
                 setNewProduct({ ...newProduct, image: e.target.value })
               }
             />
-            <Button colorScheme="blue" onClick={handleAddProduct} w="full">
+            <Button colorScheme="blue" w="full" onClick={handleAddProduct}>
               Add Product
             </Button>
           </VStack>
@@ -91,11 +108,6 @@ const CreatePage = () => {
 };
 
 export default CreatePage;
-
-
-
-
-
 
 
 // import { Container, useColorModeValue,  } from "@chakra-ui/react";
