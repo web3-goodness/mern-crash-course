@@ -26,8 +26,11 @@ function Signup() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // 🔗 Use your deployed Render backend
-  const API_URL = "https://your-backend.onrender.com"; // ⬅️ replace with your actual Render backend URL
+  // ✅ Use Render backend in production, localhost in dev
+  const API_URL =
+    import.meta.env.MODE === "production"
+      ? "https://mern-crash-course-uxuh.onrender.com" // ⬅️ replace with your real Render backend URL
+      : "http://localhost:5000";
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });

@@ -26,10 +26,10 @@ function Login() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // 🔗 Use same Render/localhost logic
+  // ✅ Use Render backend in production, localhost in dev
   const API_URL =
     import.meta.env.MODE === "production"
-      ? "https://your-backend.onrender.com" // ⬅️ replace with your real Render backend
+      ? "https://mern-crash-course-uxuh.onrender.com" // ⬅️ replace with your Render backend
       : "http://localhost:5000";
 
   const handleChange = (e) =>
@@ -50,7 +50,7 @@ function Login() {
 
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // Save user/token in localStorage for protected routes
+      // ✅ Save user/token in localStorage
       localStorage.setItem("user", JSON.stringify(data));
 
       toast({
@@ -61,7 +61,7 @@ function Login() {
         isClosable: true,
       });
 
-      navigate("/dashboard"); // or wherever you want after login
+      navigate("/dashboard"); // change path if needed
     } catch (err) {
       setError(err.message);
       toast({
