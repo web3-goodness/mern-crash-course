@@ -13,9 +13,10 @@ import {
   FormLabel,
   Text,
   useColorModeValue,
+  HStack,
   useToast,
 } from "@chakra-ui/react";
-import { ArrowBackIcon, ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { ViewIcon, ViewOffIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
@@ -25,6 +26,12 @@ function Login() {
   const navigate = useNavigate();
   const toast = useToast();
 
+  // 🔗 Use same Render/localhost logic
+  const API_URL =
+    import.meta.env.MODE === "production"
+      ? "https://your-backend.onrender.com" // ⬅️ replace with your real Render backend
+      : "http://localhost:5000";
+
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -33,7 +40,7 @@ function Login() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -43,28 +50,18 @@ function Login() {
 
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // ✅ Save user info and token together
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...data.user, // id, username, email, role
-          token: data.token,
-        })
-      );
+      // Save user/token in localStorage for protected routes
+      localStorage.setItem("user", JSON.stringify(data));
 
-      // Show toast
       toast({
         title: "Login successful",
-        description: `Welcome back, ${
-          data.user.username || data.user.email
-        }!`,
+        description: "Welcome back!",
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      // Navigate to homepage
-      navigate("/");
+      navigate("/dashboard"); // or wherever you want after login
     } catch (err) {
       setError(err.message);
       toast({
@@ -91,18 +88,15 @@ function Login() {
       rounded="lg"
       shadow="md"
     >
-      {/* Back Button */}
-      <IconButton
-        icon={<ArrowBackIcon />}
-        aria-label="Go back"
-        mb={4}
-        variant="ghost"
-        onClick={() => navigate("/")}   // ✅ back to main page
-      />
-
-      <Heading mb={6} textAlign="center">
-        Login
-      </Heading>
+      <HStack mb={4}>
+        <IconButton
+          aria-label="Back"
+          icon={<ArrowBackIcon />}
+          onClick={() => navigate("/")}
+          variant="ghost"
+        />
+        <Heading size="lg">Login</Heading>
+      </HStack>
 
       <form onSubmit={handleSubmit}>
         <VStack spacing={4}>
@@ -118,7 +112,7 @@ function Login() {
               color={textColor}
               border="1px solid"
               borderColor={borderColor}
-              placeholder="Enter your email"
+              placeholder="Enter email"
             />
           </FormControl>
 
@@ -135,11 +129,10 @@ function Login() {
                 color={textColor}
                 border="1px solid"
                 borderColor={borderColor}
-                placeholder="Enter your password"
+                placeholder="Enter password"
               />
               <InputRightElement>
                 <IconButton
-                  tabIndex={-1}
                   variant="ghost"
                   aria-label={show ? "Hide password" : "Show password"}
                   icon={show ? <ViewOffIcon /> : <ViewIcon />}
@@ -150,7 +143,6 @@ function Login() {
           </FormControl>
 
           {error && <Text color="red.500">{error}</Text>}
-
           <Button type="submit" colorScheme="blue" w="full">
             Login
           </Button>

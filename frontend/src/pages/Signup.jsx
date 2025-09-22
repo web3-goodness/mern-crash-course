@@ -14,6 +14,7 @@ import {
   Text,
   useColorModeValue,
   HStack,
+  useToast,
 } from "@chakra-ui/react";
 import { ViewIcon, ViewOffIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,10 @@ function Signup() {
   const [error, setError] = useState("");
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
+  const toast = useToast();
+
+  // 🔗 Use your deployed Render backend
+  const API_URL = "https://your-backend.onrender.com"; // ⬅️ replace with your actual Render backend URL
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,7 +37,7 @@ function Signup() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/signup", {
+      const res = await fetch(`${API_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -42,10 +47,24 @@ function Signup() {
 
       if (!res.ok) throw new Error(data.message || "Signup failed");
 
-      alert("Signup successful! Please login.");
+      toast({
+        title: "Signup successful",
+        description: "Account created! Please login.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
       navigate("/login");
     } catch (err) {
       setError(err.message);
+      toast({
+        title: "Signup failed",
+        description: err.message,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -63,12 +82,12 @@ function Signup() {
       rounded="lg"
       shadow="md"
     >
-      {/* Back Button */}
+      {/* Back Button + Heading */}
       <HStack mb={4}>
         <IconButton
           aria-label="Back"
           icon={<ArrowBackIcon />}
-          onClick={() => navigate("/")}  // ✅ Go back to main page
+          onClick={() => navigate("/")}
           variant="ghost"
         />
         <Heading size="lg">Signup</Heading>
@@ -144,7 +163,6 @@ function Signup() {
 }
 
 export default Signup;
-
 
 // // frontend/src/pages/Signup.jsx
 // import { useState } from "react";

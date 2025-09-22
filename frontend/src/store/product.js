@@ -1,9 +1,11 @@
 // frontend/src/store/product.js
-// frontend/src/store/product.js
 import { create } from "zustand";
 
-// Define backend base URL
-const BASE_URL = "http://localhost:5000";
+// Use Render backend in production, localhost in dev
+const BASE_URL =
+  import.meta.env.MODE === "production"
+    ? "https://your-backend.onrender.com"
+    : "http://localhost:5000";
 
 export const useProductStore = create((set) => ({
   products: [],
@@ -41,7 +43,8 @@ export const useProductStore = create((set) => ({
       });
 
       const data = await res.json();
-      if (!res.ok) return { success: false, message: data.message || "Server error" };
+      if (!res.ok)
+        return { success: false, message: data.message || "Server error" };
 
       set((state) => ({ products: [...state.products, data.data] }));
 
@@ -108,7 +111,6 @@ export const useProductStore = create((set) => ({
     }
   },
 }));
-
 
 
 
