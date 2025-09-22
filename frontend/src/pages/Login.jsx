@@ -26,14 +26,11 @@ function Login() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // ✅ Use Render backend in production, localhost in dev
-  const API_URL =
-    import.meta.env.MODE === "production"
-      ? "https://mern-crash-course-uxuh.onrender.com" // ⬅️ replace with your Render backend
-      : "http://localhost:5000";
+  // Use VITE_API_URL when set; otherwise use relative paths so the same origin is used (works on Render)
+  const API_URL = import.meta.env.VITE_API_URL ?? "";
 
   const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,27 +43,41 @@ function Login() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      // Some non-JSON responses (HTML errors) can break res.json(); handle safely
+      const text = await res.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: text || "Unexpected server response" };
+      }
 
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // ✅ Save user/token in localStorage
-      localStorage.setItem("user", JSON.stringify(data));
+      // normalize user object and token
+      const userObj = data.user ?? data.data ?? data;
+      const token = data.token ?? userObj.token ?? null;
+
+      // Persist to localStorage in a consistent shape: { ...userFields, token }
+      const toStore = { ...(userObj || {}), token };
+      localStorage.setItem("user", JSON.stringify(toStore));
 
       toast({
         title: "Login successful",
-        description: "Welcome back!",
+        description: `Welcome back, ${userObj.username || userObj.email || "user"}!`,
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      navigate("/dashboard"); // change path if needed
+      // navigate to home (or `/dashboard` if you prefer)
+      navigate("/");
     } catch (err) {
-      setError(err.message);
+      const msg = err?.message || "Login failed";
+      setError(msg);
       toast({
         title: "Login failed",
-        description: err.message,
+        description: msg,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -112,7 +123,7 @@ function Login() {
               color={textColor}
               border="1px solid"
               borderColor={borderColor}
-              placeholder="Enter email"
+              placeholder="Enter your email"
             />
           </FormControl>
 
@@ -129,10 +140,11 @@ function Login() {
                 color={textColor}
                 border="1px solid"
                 borderColor={borderColor}
-                placeholder="Enter password"
+                placeholder="Enter your password"
               />
               <InputRightElement>
                 <IconButton
+                  tabIndex={-1}
                   variant="ghost"
                   aria-label={show ? "Hide password" : "Show password"}
                   icon={show ? <ViewOffIcon /> : <ViewIcon />}
@@ -143,6 +155,7 @@ function Login() {
           </FormControl>
 
           {error && <Text color="red.500">{error}</Text>}
+
           <Button type="submit" colorScheme="blue" w="full">
             Login
           </Button>
