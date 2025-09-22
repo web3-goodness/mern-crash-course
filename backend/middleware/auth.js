@@ -5,42 +5,49 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   let token;
 
-  // Check if Authorization header exists and starts with "Bearer"
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     try {
-      // Get token from header
+      // ✅ Extract token from header
       token = req.headers.authorization.split(" ")[1];
 
-      // Verify token
+      // ✅ Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Attach user to request object (exclude password)
-      req.user = await User.findById(decoded.id).select("-password");
+      // ✅ Find user and attach to request (exclude password)
+      const user = await User.findById(decoded.id).select("-password");
 
-      if (!req.user) {
-        return res
-          .status(401)
-          .json({ success: false, message: "User not found" });
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "User not found",
+        });
       }
 
-      next(); // pass control to the next middleware/route handler
+      req.user = user;
+      next();
     } catch (error) {
-      console.error("❌ Token verification error:", error);
-      return res
-        .status(401)
-        .json({ success: false, message: "Not authorized, token failed" });
+      console.error("❌ Token verification error:", error.message);
+
+      let message = "Not authorized, token failed";
+      if (error.name === "TokenExpiredError") {
+        message = "Not authorized, token expired";
+      }
+
+      return res.status(401).json({
+        success: false,
+        message,
+      });
     }
   } else {
-    // No token provided
-    return res
-      .status(401)
-      .json({ success: false, message: "Not authorized, no token" });
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized, no token",
+    });
   }
 };
-
 
 
 // // backend/middleware/auth.js

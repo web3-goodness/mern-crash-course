@@ -2,19 +2,24 @@
 import Product from "../models/Product.js";
 import mongoose from "mongoose";
 
-// GET /api/products
+// ✅ GET /api/products (Public)
 export const getProducts = async (req, res) => {
   try {
     const products = await Product.find().populate("owner", "username email role");
     res.status(200).json({ success: true, data: products });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("❌ Get Products Error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// POST /api/products
+// ✅ POST /api/products (Protected)
 export const createProduct = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
     const { name, price, image } = req.body;
     if (!name || price == null || !image) {
       return res.status(400).json({ success: false, message: "All fields are required" });
@@ -29,11 +34,12 @@ export const createProduct = async (req, res) => {
 
     res.status(201).json({ success: true, data: product });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("❌ Create Product Error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// PUT /api/products/:pid
+// ✅ PUT /api/products/:pid (Protected)
 export const updateProduct = async (req, res) => {
   try {
     const { pid } = req.params;
@@ -47,8 +53,15 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Admin can always edit; owner can edit if exists
-    if ((product.owner && product.owner.toString() !== req.user._id.toString()) && req.user.role !== "admin") {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    // ✅ Only owner or admin can update
+    if (
+      (product.owner && product.owner.toString() !== req.user._id.toString()) &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
@@ -60,11 +73,12 @@ export const updateProduct = async (req, res) => {
     const updatedProduct = await product.save();
     res.status(200).json({ success: true, data: updatedProduct });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("❌ Update Product Error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// DELETE /api/products/:pid
+// ✅ DELETE /api/products/:pid (Protected)
 export const deleteProduct = async (req, res) => {
   try {
     const { pid } = req.params;
@@ -78,15 +92,23 @@ export const deleteProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Admin can always delete; owner can delete if exists
-    if ((product.owner && product.owner.toString() !== req.user._id.toString()) && req.user.role !== "admin") {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    // ✅ Only owner or admin can delete
+    if (
+      (product.owner && product.owner.toString() !== req.user._id.toString()) &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
     await product.deleteOne();
     res.status(200).json({ success: true, message: "Product deleted successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("❌ Delete Product Error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
