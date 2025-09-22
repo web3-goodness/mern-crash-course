@@ -7,46 +7,26 @@ export const protect = async (req, res, next) => {
 
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
+    req.headers.authorization.startsWith("Bearer ")
   ) {
     try {
-      // ✅ Extract token from header
       token = req.headers.authorization.split(" ")[1];
-
-      // ✅ Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // ✅ Find user and attach to request (exclude password)
-      const user = await User.findById(decoded.id).select("-password");
+      req.user = await User.findById(decoded.id).select("-password");
 
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User not found",
-        });
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: "User not found" });
       }
 
-      req.user = user;
-      next();
-    } catch (error) {
-      console.error("❌ Token verification error:", error.message);
-
-      let message = "Not authorized, token failed";
-      if (error.name === "TokenExpiredError") {
-        message = "Not authorized, token expired";
-      }
-
-      return res.status(401).json({
-        success: false,
-        message,
-      });
+      return next();
+    } catch (err) {
+      console.error("❌ Token verification error:", err.message);
+      return res.status(401).json({ success: false, message: "Not authorized, token failed" });
     }
-  } else {
-    return res.status(401).json({
-      success: false,
-      message: "Not authorized, no token",
-    });
   }
+
+  return res.status(401).json({ success: false, message: "Not authorized, no token" });
 };
 
 

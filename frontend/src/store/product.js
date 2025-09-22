@@ -1,13 +1,13 @@
 // frontend/src/store/product.js
 import { create } from "zustand";
 
-// ✅ Use backend depending on environment
+// ✅ Backend URL depending on environment
 const BASE_URL =
   import.meta.env.MODE === "production"
-    ? "https://your-backend.onrender.com" // ⬅️ replace with your actual Render backend URL
+    ? "https://YOUR-RENDER-BACKEND.onrender.com" // ⬅️ replace with your actual Render backend URL
     : "http://localhost:5000";
 
-// ✅ Helper: get token safely
+// ✅ Helper: get token safely from localStorage
 const getAuthHeaders = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const token = user?.token || "";
@@ -16,7 +16,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// ✅ Helper: safely parse JSON (avoids crash on non-JSON responses)
+// ✅ Helper: safely parse JSON responses
 const safeJson = async (res) => {
   const text = await res.text();
   try {
@@ -32,8 +32,11 @@ export const useProductStore = create((set) => ({
   // Fetch all products (public)
   fetchProducts: async () => {
     try {
+      console.log("🌐 Fetching products from:", `${BASE_URL}/api/products`);
       const res = await fetch(`${BASE_URL}/api/products`);
       const data = await safeJson(res);
+
+      console.log("📦 Products response:", data);
 
       if (!res.ok) throw new Error(data.message || "Failed to fetch products");
 
@@ -46,6 +49,8 @@ export const useProductStore = create((set) => ({
   // Create product (protected)
   createProduct: async (product) => {
     try {
+      console.log("🛠️ Creating product:", product);
+
       const res = await fetch(`${BASE_URL}/api/products`, {
         method: "POST",
         headers: {
@@ -59,12 +64,15 @@ export const useProductStore = create((set) => ({
       });
 
       const data = await safeJson(res);
+      console.log("🛠️ Create product response:", data);
+
       if (!res.ok)
         return { success: false, message: data.message || "Server error" };
 
       set((state) => ({ products: [...state.products, data.data] }));
       return { success: true, message: "Product created successfully" };
     } catch (err) {
+      console.error("❌ Create product error:", err.message);
       return { success: false, message: err.message };
     }
   },
@@ -72,12 +80,16 @@ export const useProductStore = create((set) => ({
   // Delete product (protected)
   deleteProduct: async (pid) => {
     try {
+      console.log("🗑️ Deleting product:", pid);
+
       const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "DELETE",
         headers: { ...getAuthHeaders() },
       });
 
       const data = await safeJson(res);
+      console.log("🗑️ Delete response:", data);
+
       if (!res.ok)
         return { success: false, message: data.message || "Delete failed" };
 
@@ -87,6 +99,7 @@ export const useProductStore = create((set) => ({
 
       return { success: true, message: "Product deleted successfully" };
     } catch (err) {
+      console.error("❌ Delete product error:", err.message);
       return { success: false, message: err.message };
     }
   },
@@ -94,6 +107,8 @@ export const useProductStore = create((set) => ({
   // Update product (protected)
   updateProduct: async (pid, updatedProduct) => {
     try {
+      console.log("✏️ Updating product:", pid, updatedProduct);
+
       const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "PUT",
         headers: {
@@ -107,6 +122,8 @@ export const useProductStore = create((set) => ({
       });
 
       const data = await safeJson(res);
+      console.log("✏️ Update response:", data);
+
       if (!res.ok)
         return { success: false, message: data.message || "Update failed" };
 
@@ -118,11 +135,11 @@ export const useProductStore = create((set) => ({
 
       return { success: true, message: "Product updated successfully" };
     } catch (err) {
+      console.error("❌ Update product error:", err.message);
       return { success: false, message: err.message };
     }
   },
 }));
-
 
 
 // import {create} from "zustand";

@@ -111,7 +111,7 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
+    
 
 // import Product from "../models/product.model.js";
 // import mongoose from "mongoose";

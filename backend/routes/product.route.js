@@ -10,16 +10,12 @@ import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// ✅ Public route: fetch all products
-router.get("/", getProducts);
-
-// ✅ Protected routes: must be logged in
-router.post("/", protect, createProduct);
+router.get("/", getProducts);              // public
+router.post("/", protect, createProduct);  // protected
 router.put("/:pid", protect, updateProduct);
 router.delete("/:pid", protect, deleteProduct);
 
 export default router;
-
 
 
 // import express from "express";
