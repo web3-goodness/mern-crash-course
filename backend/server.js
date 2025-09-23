@@ -1,3 +1,4 @@
+// backend/server.js
 import express from "express";
 import dotenv from "dotenv";
 import path from "path";
@@ -9,28 +10,20 @@ import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
 // ✅ For ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Connect to MongoDB
-connectDB()
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message);
-    process.exit(1);
-  });
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-// ✅ Middleware
+
 app.use(express.json());
 
-// ✅ Enable CORS (dev + prod)
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: "http://localhost:5173", // frontend dev URL
     credentials: true,
   })
 );
@@ -39,24 +32,24 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
-// ✅ Test route
+// ✅ Test API route
 app.get("/api/test", (req, res) => res.send("Backend is running"));
 
 // ✅ Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-  // Catch-all route for React SPA
   app.get("", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "../frontend/dist", "index.html"));
+    res.sendFile(path.resolve(__dirname, "../frontend", "dist", "index.html"));
   });
 }
 
-// ✅ Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode at http://localhost:${PORT}`);
+// ✅ Start server after DB connection
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server started at http://localhost:${PORT}`);
+  });
 });
-
 
 // // backend/server.js
 // import express from "express";

@@ -26,11 +26,8 @@ function Signup() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // ✅ Use Render backend in production, localhost in dev
-  const API_URL =
-    import.meta.env.MODE === "production"
-      ? "https://mern-crash-course-uxuh.onrender.com" // ⬅️ replace with your real Render backend URL
-      : "http://localhost:5000";
+  // Use relative path for local development
+  const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -46,24 +43,41 @@ function Signup() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: text || "Unexpected server response" };
+      }
 
       if (!res.ok) throw new Error(data.message || "Signup failed");
 
+      // Normalize user object and token
+      const userObj = data.user ?? data.data ?? data;
+      const token = data.token ?? userObj.token ?? null;
+
+      if (!token) throw new Error("No token returned from server");
+
+      // Save to localStorage
+      const toStore = { ...(userObj || {}), token };
+      localStorage.setItem("user", JSON.stringify(toStore));
+
       toast({
         title: "Signup successful",
-        description: "Account created! Please login.",
+        description: `Welcome, ${userObj.username || userObj.email || "user"}!`,
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      navigate("/login");
+      navigate("/"); // redirect to homepage
     } catch (err) {
-      setError(err.message);
+      const msg = err?.message || "Signup failed";
+      setError(msg);
       toast({
         title: "Signup failed",
-        description: err.message,
+        description: msg,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -85,7 +99,6 @@ function Signup() {
       rounded="lg"
       shadow="md"
     >
-      {/* Back Button + Heading */}
       <HStack mb={4}>
         <IconButton
           aria-label="Back"

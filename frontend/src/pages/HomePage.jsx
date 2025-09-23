@@ -27,22 +27,22 @@ const HomePage = () => {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [fetchProducts]);
 
   // Callback to update product in local state after edit
   const handleProductUpdate = (updatedProduct) => {
-    useProductStore.setState({
-      products: products.map((p) =>
+    useProductStore.setState((state) => ({
+      products: state.products.map((p) =>
         p._id === updatedProduct._id ? updatedProduct : p
       ),
-    });
+    }));
   };
 
   // Callback to remove product from local state after delete
   const handleProductDelete = (deletedProductId) => {
-    useProductStore.setState({
-      products: products.filter((p) => p._id !== deletedProductId),
-    });
+    useProductStore.setState((state) => ({
+      products: state.products.filter((p) => p._id !== deletedProductId),
+    }));
   };
 
   return (
@@ -60,7 +60,7 @@ const HomePage = () => {
 
         {loading ? (
           <Spinner size="xl" color="blue.500" />
-        ) : products && products.length > 0 ? (
+        ) : products?.length > 0 ? (
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10} w="full">
             {products.map((product) => (
               <Box

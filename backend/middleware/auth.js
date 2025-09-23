@@ -5,30 +5,42 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer ")
-  ) {
+  // Check for Bearer token in headers
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
     try {
+      // Extract token
       token = req.headers.authorization.split(" ")[1];
+
+      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = await User.findById(decoded.id).select("-password");
-
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: "User not found" });
+      // Find user by ID from token, exclude password
+      const user = await User.findById(decoded.id).select("-password");
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "User not found",
+        });
       }
+
+      // Attach user to request object
+      req.user = user;
 
       return next();
     } catch (err) {
       console.error("❌ Token verification error:", err.message);
-      return res.status(401).json({ success: false, message: "Not authorized, token failed" });
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, token failed",
+      });
     }
+  } else {
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized, no token",
+    });
   }
-
-  return res.status(401).json({ success: false, message: "Not authorized, no token" });
 };
-
 
 // // backend/middleware/auth.js
 // import jwt from "jsonwebtoken";

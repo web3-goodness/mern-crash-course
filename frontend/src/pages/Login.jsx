@@ -26,8 +26,8 @@ function Login() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Use VITE_API_URL when set; otherwise use relative paths so the same origin is used (works on Render)
-  const API_URL = import.meta.env.VITE_API_URL ?? "";
+  // Use relative path for local testing
+  const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -43,7 +43,6 @@ function Login() {
         body: JSON.stringify(form),
       });
 
-      // Some non-JSON responses (HTML errors) can break res.json(); handle safely
       const text = await res.text();
       let data;
       try {
@@ -58,7 +57,9 @@ function Login() {
       const userObj = data.user ?? data.data ?? data;
       const token = data.token ?? userObj.token ?? null;
 
-      // Persist to localStorage in a consistent shape: { ...userFields, token }
+      if (!token) throw new Error("No token returned from server");
+
+      // Persist to localStorage
       const toStore = { ...(userObj || {}), token };
       localStorage.setItem("user", JSON.stringify(toStore));
 
@@ -70,8 +71,7 @@ function Login() {
         isClosable: true,
       });
 
-      // navigate to home (or `/dashboard` if you prefer)
-      navigate("/");
+      navigate("/"); // redirect to homepage
     } catch (err) {
       const msg = err?.message || "Login failed";
       setError(msg);

@@ -1,11 +1,8 @@
 // frontend/src/store/product.js
 import { create } from "zustand";
 
-// ✅ Backend URL depending on environment
-const BASE_URL =
-  import.meta.env.MODE === "production"
-    ? "https://YOUR-RENDER-BACKEND.onrender.com" // ⬅️ replace with your actual Render backend URL
-    : "http://localhost:5000";
+// ✅ Backend URL for local testing
+const BASE_URL = "http://localhost:5000";
 
 // ✅ Helper: get token safely from localStorage
 const getAuthHeaders = () => {
@@ -35,22 +32,20 @@ export const useProductStore = create((set) => ({
       console.log("🌐 Fetching products from:", `${BASE_URL}/api/products`);
       const res = await fetch(`${BASE_URL}/api/products`);
       const data = await safeJson(res);
-
       console.log("📦 Products response:", data);
 
       if (!res.ok) throw new Error(data.message || "Failed to fetch products");
 
-      set({ products: data.data || [] });
+      set({ products: Array.isArray(data.data) ? data.data : [] });
     } catch (err) {
       console.error("❌ Fetch products error:", err.message);
+      set({ products: [] });
     }
   },
 
   // Create product (protected)
   createProduct: async (product) => {
     try {
-      console.log("🛠️ Creating product:", product);
-
       const res = await fetch(`${BASE_URL}/api/products`, {
         method: "POST",
         headers: {
@@ -64,10 +59,7 @@ export const useProductStore = create((set) => ({
       });
 
       const data = await safeJson(res);
-      console.log("🛠️ Create product response:", data);
-
-      if (!res.ok)
-        return { success: false, message: data.message || "Server error" };
+      if (!res.ok) return { success: false, message: data.message || "Server error" };
 
       set((state) => ({ products: [...state.products, data.data] }));
       return { success: true, message: "Product created successfully" };
@@ -80,23 +72,15 @@ export const useProductStore = create((set) => ({
   // Delete product (protected)
   deleteProduct: async (pid) => {
     try {
-      console.log("🗑️ Deleting product:", pid);
-
       const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "DELETE",
         headers: { ...getAuthHeaders() },
       });
 
       const data = await safeJson(res);
-      console.log("🗑️ Delete response:", data);
+      if (!res.ok) return { success: false, message: data.message || "Delete failed" };
 
-      if (!res.ok)
-        return { success: false, message: data.message || "Delete failed" };
-
-      set((state) => ({
-        products: state.products.filter((product) => product._id !== pid),
-      }));
-
+      set((state) => ({ products: state.products.filter((p) => p._id !== pid) }));
       return { success: true, message: "Product deleted successfully" };
     } catch (err) {
       console.error("❌ Delete product error:", err.message);
@@ -107,8 +91,6 @@ export const useProductStore = create((set) => ({
   // Update product (protected)
   updateProduct: async (pid, updatedProduct) => {
     try {
-      console.log("✏️ Updating product:", pid, updatedProduct);
-
       const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "PUT",
         headers: {
@@ -122,17 +104,11 @@ export const useProductStore = create((set) => ({
       });
 
       const data = await safeJson(res);
-      console.log("✏️ Update response:", data);
-
-      if (!res.ok)
-        return { success: false, message: data.message || "Update failed" };
+      if (!res.ok) return { success: false, message: data.message || "Update failed" };
 
       set((state) => ({
-        products: state.products.map((product) =>
-          product._id === pid ? data.data : product
-        ),
+        products: state.products.map((p) => (p._id === pid ? data.data : p)),
       }));
-
       return { success: true, message: "Product updated successfully" };
     } catch (err) {
       console.error("❌ Update product error:", err.message);
