@@ -1,20 +1,9 @@
 // frontend/src/pages/Login.jsx
 import { useState } from "react";
 import {
-  Box,
-  Button,
-  Input,
-  InputGroup,
-  InputRightElement,
-  IconButton,
-  VStack,
-  Heading,
-  FormControl,
-  FormLabel,
-  Text,
-  useColorModeValue,
-  HStack,
-  useToast,
+  Box, Button, Input, InputGroup, InputRightElement, IconButton,
+  VStack, Heading, FormControl, FormLabel, Text, useColorModeValue,
+  HStack, useToast
 } from "@chakra-ui/react";
 import { ViewIcon, ViewOffIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
@@ -26,8 +15,11 @@ function Login() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Use relative path for local testing
-  const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+  // ✅ Use localhost in dev, relative path in production
+  const API_URL =
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000"
+      : "";
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -35,7 +27,6 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
@@ -48,36 +39,32 @@ function Login() {
       try {
         data = text ? JSON.parse(text) : {};
       } catch {
-        data = { message: text || "Unexpected server response" };
+        data = { message: text };
       }
 
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // normalize user object and token
-      const userObj = data.user ?? data.data ?? data;
-      const token = data.token ?? userObj.token ?? null;
+      // ✅ Normalize user + token
+      const token = data.token || data?.data?.token || data?.user?.token;
+      const user = data.user || data.data?.user || data.data || {};
 
-      if (!token) throw new Error("No token returned from server");
-
-      // Persist to localStorage
-      const toStore = { ...(userObj || {}), token };
+      const toStore = { ...user, token };
       localStorage.setItem("user", JSON.stringify(toStore));
 
       toast({
         title: "Login successful",
-        description: `Welcome back, ${userObj.username || userObj.email || "user"}!`,
+        description: `Welcome back, ${user.username || user.email || "user"}!`,
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      navigate("/"); // redirect to homepage
+      navigate("/");
     } catch (err) {
-      const msg = err?.message || "Login failed";
-      setError(msg);
+      setError(err.message);
       toast({
         title: "Login failed",
-        description: msg,
+        description: err.message,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -123,7 +110,7 @@ function Login() {
               color={textColor}
               border="1px solid"
               borderColor={borderColor}
-              placeholder="Enter your email"
+              placeholder="Enter email"
             />
           </FormControl>
 
@@ -140,7 +127,7 @@ function Login() {
                 color={textColor}
                 border="1px solid"
                 borderColor={borderColor}
-                placeholder="Enter your password"
+                placeholder="Enter password"
               />
               <InputRightElement>
                 <IconButton
@@ -155,7 +142,6 @@ function Login() {
           </FormControl>
 
           {error && <Text color="red.500">{error}</Text>}
-
           <Button type="submit" colorScheme="blue" w="full">
             Login
           </Button>

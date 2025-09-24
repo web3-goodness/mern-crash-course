@@ -1,20 +1,8 @@
-// frontend/src/pages/Signup.jsx
 import { useState } from "react";
 import {
-  Box,
-  Button,
-  Input,
-  InputGroup,
-  InputRightElement,
-  IconButton,
-  VStack,
-  Heading,
-  FormControl,
-  FormLabel,
-  Text,
-  useColorModeValue,
-  HStack,
-  useToast,
+  Box, Button, Input, InputGroup, InputRightElement, IconButton,
+  VStack, Heading, FormControl, FormLabel, Text, useColorModeValue,
+  HStack, useToast
 } from "@chakra-ui/react";
 import { ViewIcon, ViewOffIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
@@ -26,16 +14,18 @@ function Signup() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Use relative path for local development
-  const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+  // ✅ API URL handling (dev → localhost, prod → same domain as deployed backend)
+  const API_URL =
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000"
+      : "";
 
   const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
     try {
       const res = await fetch(`${API_URL}/api/auth/signup`, {
         method: "POST",
@@ -48,36 +38,25 @@ function Signup() {
       try {
         data = text ? JSON.parse(text) : {};
       } catch {
-        data = { message: text || "Unexpected server response" };
+        data = { message: text };
       }
 
       if (!res.ok) throw new Error(data.message || "Signup failed");
 
-      // Normalize user object and token
-      const userObj = data.user ?? data.data ?? data;
-      const token = data.token ?? userObj.token ?? null;
-
-      if (!token) throw new Error("No token returned from server");
-
-      // Save to localStorage
-      const toStore = { ...(userObj || {}), token };
-      localStorage.setItem("user", JSON.stringify(toStore));
-
       toast({
         title: "Signup successful",
-        description: `Welcome, ${userObj.username || userObj.email || "user"}!`,
+        description: "You can now log in.",
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      navigate("/"); // redirect to homepage
+      navigate("/login");
     } catch (err) {
-      const msg = err?.message || "Signup failed";
-      setError(msg);
+      setError(err.message);
       toast({
         title: "Signup failed",
-        description: msg,
+        description: err.message,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -99,6 +78,7 @@ function Signup() {
       rounded="lg"
       shadow="md"
     >
+      {/* Back + Heading */}
       <HStack mb={4}>
         <IconButton
           aria-label="Back"
@@ -114,6 +94,7 @@ function Signup() {
           <FormControl>
             <FormLabel>Username</FormLabel>
             <Input
+              type="text"
               name="username"
               value={form.username}
               onChange={handleChange}
@@ -155,10 +136,11 @@ function Signup() {
                 color={textColor}
                 border="1px solid"
                 borderColor={borderColor}
-                placeholder="Choose a password"
+                placeholder="Enter password"
               />
               <InputRightElement>
                 <IconButton
+                  tabIndex={-1}
                   variant="ghost"
                   aria-label={show ? "Hide password" : "Show password"}
                   icon={show ? <ViewOffIcon /> : <ViewIcon />}

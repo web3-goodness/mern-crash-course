@@ -2,27 +2,27 @@
 import Product from "../models/Product.js";
 import mongoose from "mongoose";
 
-// ✅ GET /api/products (Public)
+// GET /api/products
 export const getProducts = async (req, res) => {
   try {
     const products = await Product.find().populate("owner", "username email role");
     res.status(200).json({ success: true, data: products });
   } catch (err) {
-    console.error("❌ Get Products Error:", err.message);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ✅ POST /api/products (Protected)
+// POST /api/products
 export const createProduct = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "Not authorized" });
-    }
-
     const { name, price, image } = req.body;
     if (!name || price == null || !image) {
       return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    if (!req.user || !req.user._id) {
+      // If protect middleware malfunctioned
+      return res.status(401).json({ success: false, message: "Not authorized" });
     }
 
     const product = await Product.create({
@@ -34,12 +34,11 @@ export const createProduct = async (req, res) => {
 
     res.status(201).json({ success: true, data: product });
   } catch (err) {
-    console.error("❌ Create Product Error:", err.message);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ✅ PUT /api/products/:pid (Protected)
+// PUT /api/products/:pid
 export const updateProduct = async (req, res) => {
   try {
     const { pid } = req.params;
@@ -53,32 +52,24 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "Not authorized" });
-    }
-
-    // ✅ Only owner or admin can update
-    if (
-      (product.owner && product.owner.toString() !== req.user._id.toString()) &&
-      req.user.role !== "admin"
-    ) {
+    // Admin can always edit. Owner can edit if product.owner exists.
+    if (!(product.owner && product.owner.toString() === req.user._id.toString()) && req.user.role !== "admin") {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
     const { name, price, image } = req.body;
-    product.name = name ?? product.name;
-    product.price = price ?? product.price;
-    product.image = image ?? product.image;
+    if (name !== undefined) product.name = name;
+    if (price !== undefined) product.price = price;
+    if (image !== undefined) product.image = image;
 
     const updatedProduct = await product.save();
     res.status(200).json({ success: true, data: updatedProduct });
   } catch (err) {
-    console.error("❌ Update Product Error:", err.message);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ✅ DELETE /api/products/:pid (Protected)
+// DELETE /api/products/:pid
 export const deleteProduct = async (req, res) => {
   try {
     const { pid } = req.params;
@@ -92,26 +83,17 @@ export const deleteProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "Not authorized" });
-    }
-
-    // ✅ Only owner or admin can delete
-    if (
-      (product.owner && product.owner.toString() !== req.user._id.toString()) &&
-      req.user.role !== "admin"
-    ) {
+    if (!(product.owner && product.owner.toString() === req.user._id.toString()) && req.user.role !== "admin") {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
     await product.deleteOne();
     res.status(200).json({ success: true, message: "Product deleted successfully" });
   } catch (err) {
-    console.error("❌ Delete Product Error:", err.message);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
-    
+
 
 // import Product from "../models/product.model.js";
 // import mongoose from "mongoose";

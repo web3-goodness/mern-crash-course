@@ -1,19 +1,30 @@
 // frontend/src/store/product.js
 import { create } from "zustand";
 
-// ✅ Backend URL for local testing
-const BASE_URL = "http://localhost:5000";
+// Decide base URL:
+// - If VITE_API_URL is set (recommended), use that.
+// - Else in dev use localhost:5000, in production use relative path.
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === "development" ? "http://localhost:5000" : "");
 
-// ✅ Helper: get token safely from localStorage
-const getAuthHeaders = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const token = user?.token || "";
-  return {
-    Authorization: `Bearer ${token}`,
-  };
+const getToken = () => {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    // token could be at parsed.token or parsed.data.token depending on backend shape
+    return parsed.token || parsed?.data?.token || "";
+  } catch {
+    return "";
+  }
 };
 
-// ✅ Helper: safely parse JSON responses
+const getAuthHeaders = () => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const safeJson = async (res) => {
   const text = await res.text();
   try {
@@ -26,24 +37,18 @@ const safeJson = async (res) => {
 export const useProductStore = create((set) => ({
   products: [],
 
-  // Fetch all products (public)
   fetchProducts: async () => {
     try {
-      console.log("🌐 Fetching products from:", `${BASE_URL}/api/products`);
       const res = await fetch(`${BASE_URL}/api/products`);
       const data = await safeJson(res);
-      console.log("📦 Products response:", data);
-
       if (!res.ok) throw new Error(data.message || "Failed to fetch products");
-
       set({ products: Array.isArray(data.data) ? data.data : [] });
     } catch (err) {
-      console.error("❌ Fetch products error:", err.message);
+      console.error("Fetch products error:", err.message);
       set({ products: [] });
     }
   },
 
-  // Create product (protected)
   createProduct: async (product) => {
     try {
       const res = await fetch(`${BASE_URL}/api/products`, {
@@ -52,43 +57,32 @@ export const useProductStore = create((set) => ({
           "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({
-          ...product,
-          price: parseFloat(product.price) || 0,
-        }),
+        body: JSON.stringify({ ...product, price: parseFloat(product.price) || 0 }),
       });
-
       const data = await safeJson(res);
       if (!res.ok) return { success: false, message: data.message || "Server error" };
-
       set((state) => ({ products: [...state.products, data.data] }));
       return { success: true, message: "Product created successfully" };
     } catch (err) {
-      console.error("❌ Create product error:", err.message);
       return { success: false, message: err.message };
     }
   },
 
-  // Delete product (protected)
   deleteProduct: async (pid) => {
     try {
       const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "DELETE",
         headers: { ...getAuthHeaders() },
       });
-
       const data = await safeJson(res);
       if (!res.ok) return { success: false, message: data.message || "Delete failed" };
-
       set((state) => ({ products: state.products.filter((p) => p._id !== pid) }));
-      return { success: true, message: "Product deleted successfully" };
+      return { success: true, message: "Product deleted" };
     } catch (err) {
-      console.error("❌ Delete product error:", err.message);
       return { success: false, message: err.message };
     }
   },
 
-  // Update product (protected)
   updateProduct: async (pid, updatedProduct) => {
     try {
       const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
@@ -97,21 +91,13 @@ export const useProductStore = create((set) => ({
           "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({
-          ...updatedProduct,
-          price: parseFloat(updatedProduct.price) || 0,
-        }),
+        body: JSON.stringify({ ...updatedProduct, price: parseFloat(updatedProduct.price) || 0 }),
       });
-
       const data = await safeJson(res);
       if (!res.ok) return { success: false, message: data.message || "Update failed" };
-
-      set((state) => ({
-        products: state.products.map((p) => (p._id === pid ? data.data : p)),
-      }));
-      return { success: true, message: "Product updated successfully" };
+      set((state) => ({ products: state.products.map((p) => (p._id === pid ? data.data : p)) }));
+      return { success: true, message: "Product updated" };
     } catch (err) {
-      console.error("❌ Update product error:", err.message);
       return { success: false, message: err.message };
     }
   },

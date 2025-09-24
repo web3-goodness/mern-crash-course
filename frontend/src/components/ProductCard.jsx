@@ -22,6 +22,11 @@ import {
   VStack,
 } from "@chakra-ui/react";
 
+// ✅ Use the same BASE_URL logic as store/product.js
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === "development" ? "http://localhost:5000" : "");
+
 const ProductCard = ({ product, onProductUpdate, onProductDelete }) => {
   const [updatedProduct, setUpdatedProduct] = useState({
     name: "",
@@ -51,12 +56,8 @@ const ProductCard = ({ product, onProductUpdate, onProductDelete }) => {
 
   // Update product
   const handleUpdateProduct = async (pid, updatedProduct) => {
-    if (!pid) {
-      console.error("No product ID provided!");
-      return;
-    }
+    if (!pid) return;
 
-    // Validation
     if (
       !updatedProduct.name.trim() ||
       !updatedProduct.price.trim() ||
@@ -84,14 +85,8 @@ const ProductCard = ({ product, onProductUpdate, onProductDelete }) => {
       return;
     }
 
-    console.log("Updating product ID:", pid, "with:", {
-      name: updatedProduct.name,
-      price: priceValue,
-      image: updatedProduct.image,
-    });
-
     try {
-      const res = await fetch(`/api/products/${pid}`, {
+      const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -131,21 +126,16 @@ const ProductCard = ({ product, onProductUpdate, onProductDelete }) => {
 
   // Delete product
   const handleDeleteProduct = async (pid) => {
-    if (!pid) {
-      console.error("No product ID provided for deletion!");
-      return;
-    }
-
-    console.log("Deleting product ID:", pid);
+    if (!pid) return;
 
     try {
-      const res = await fetch(`/api/products/${pid}`, {
+      const res = await fetch(`${BASE_URL}/api/products/${pid}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user?.token || ""}` },
       });
 
       const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to delete product");
+      if (!res.ok) throw new Error(data.message || "Failed to delete product");
 
       toast({
         title: "Success",

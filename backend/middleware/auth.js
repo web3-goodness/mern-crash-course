@@ -3,42 +3,37 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 export const protect = async (req, res, next) => {
-  let token;
+  try {
+    let token;
 
-  // Check for Bearer token in headers
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
-    try {
-      // Extract token
+    // Prefer Authorization header but accept cookie if you use cookies
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Find user by ID from token, exclude password
-      const user = await User.findById(decoded.id).select("-password");
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User not found",
-        });
-      }
-
-      // Attach user to request object
-      req.user = user;
-
-      return next();
-    } catch (err) {
-      console.error("❌ Token verification error:", err.message);
-      return res.status(401).json({
-        success: false,
-        message: "Not authorized, token failed",
-      });
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
     }
-  } else {
-    return res.status(401).json({
-      success: false,
-      message: "Not authorized, no token",
-    });
+
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Not authorized, no token" });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET not set in environment!");
+      return res.status(500).json({ success: false, message: "Server misconfiguration" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    req.user = user; // attach user
+    next();
+  } catch (err) {
+    console.error("❌ Token verification error:", err.message);
+    return res.status(401).json({ success: false, message: "Not authorized, token failed" });
   }
 };
 

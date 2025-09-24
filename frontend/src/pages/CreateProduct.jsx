@@ -1,65 +1,60 @@
 // frontend/src/pages/CreateProduct.jsx
 import { useState } from "react";
 import {
-  Box,
-  Button,
-  Input,
-  VStack,
-  Heading,
-  useColorModeValue,
-  useToast,
+  Box, Button, Input, VStack, Heading, FormControl, FormLabel,
+  useToast, Text
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
-const CreateProduct = () => {
-  const [product, setProduct] = useState({ name: "", price: "", image: "" });
-  const toast = useToast();
+function CreateProduct() {
+  const [product, setProduct] = useState({ name: "", price: "", description: "" });
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const bg = useColorModeValue("white", "gray.800");
+  const toast = useToast();
 
-  const user = JSON.parse(localStorage.getItem("user")); // logged-in user with token
+  // ✅ Dev uses localhost, prod uses Render-relative path
+  const API_URL =
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000"
+      : "";
 
-  const handleChange = (e) => {
-    setProduct({ ...product, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) =>
+    setProduct((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    if (!product.name || !product.price || !product.image) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.token) {
+      setError("Not authorized");
       return;
     }
 
     try {
-      const res = await fetch("/api/products", {
+      const res = await fetch(`${API_URL}/api/products`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user?.token || ""}`,
+          Authorization: `Bearer ${user.token}`,
         },
         body: JSON.stringify(product),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to create product");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to create product");
+      }
 
       toast({
-        title: "Success",
-        description: "Product created successfully",
+        title: "Product created",
         status: "success",
         duration: 3000,
         isClosable: true,
       });
-
-      navigate("/"); // go back to home page
+      navigate("/");
     } catch (err) {
+      setError(err.message);
       toast({
         title: "Error",
         description: err.message,
@@ -71,31 +66,37 @@ const CreateProduct = () => {
   };
 
   return (
-    <Box maxW="md" mx="auto" mt={10} p={6} bg={bg} rounded="lg" shadow="md">
-      <Heading mb={6} textAlign="center">
-        Create Product
-      </Heading>
+    <Box maxW="md" mx="auto" mt={10} p={6} borderWidth={1} rounded="lg" shadow="md">
+      <Heading size="lg" mb={6}>Create Product</Heading>
+
       <form onSubmit={handleSubmit}>
         <VStack spacing={4}>
-          <Input
-            placeholder="Product Name"
-            name="name"
-            value={product.name}
-            onChange={handleChange}
-          />
-          <Input
-            placeholder="Product Price"
-            name="price"
-            type="number"
-            value={product.price}
-            onChange={handleChange}
-          />
-          <Input
-            placeholder="Product Image URL"
-            name="image"
-            value={product.image}
-            onChange={handleChange}
-          />
+          <FormControl>
+            <FormLabel>Name</FormLabel>
+            <Input name="name" value={product.name} onChange={handleChange} required />
+          </FormControl>
+
+          <FormControl>
+            <FormLabel>Price</FormLabel>
+            <Input
+              type="number"
+              name="price"
+              value={product.price}
+              onChange={handleChange}
+              required
+            />
+          </FormControl>
+
+          <FormControl>
+            <FormLabel>Description</FormLabel>
+            <Input
+              name="description"
+              value={product.description}
+              onChange={handleChange}
+            />
+          </FormControl>
+
+          {error && <Text color="red.500">{error}</Text>}
           <Button type="submit" colorScheme="blue" w="full">
             Create
           </Button>
@@ -103,6 +104,6 @@ const CreateProduct = () => {
       </form>
     </Box>
   );
-};
+}
 
 export default CreateProduct;

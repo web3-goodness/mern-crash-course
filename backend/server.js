@@ -10,46 +10,61 @@ import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
-// ✅ For ESM __dirname
+const app = express();
+const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-
+// Middleware
 app.use(express.json());
 
-
+// CORS setup
 app.use(
   cors({
-    origin: "http://localhost:5173", // frontend dev URL
+    origin:
+      process.env.NODE_ENV === "production"
+        ? process.env.CLIENT_URL
+        : process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   })
 );
 
-// ✅ API Routes
+// API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
-// ✅ Test API route
-app.get("/api/test", (req, res) => res.send("Backend is running"));
+// Test route
+app.get("/api/test", (req, res) =>
+  res.json({ success: true, message: "Backend running" })
+);
 
-// ✅ Serve frontend in production
+// Serve frontend in production
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  const staticPath = path.join(__dirname, "../frontend/dist");
+  app.use(express.static(staticPath));
 
+  // Catch-all for React Router
   app.get("", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "../frontend", "dist", "index.html"));
+    if (req.path.startsWith("/api")) {
+      return res
+        .status(404)
+        .json({ success: false, message: "API route not found" });
+    }
+    res.sendFile(path.join(staticPath, "index.html"));
   });
 }
 
-// ✅ Start server after DB connection
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server started at http://localhost:${PORT}`);
+// Start server after DB connection
+connectDB()
+  .then(() => {
+    app.listen(PORT, () =>
+      console.log(`🚀 Server started on port ${PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error("❌ DB connection failed:", err);
+    process.exit(1);
   });
-});
 
 // // backend/server.js
 // import express from "express";

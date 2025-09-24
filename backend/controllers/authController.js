@@ -3,40 +3,41 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-// Helper to generate token
+// Helper: generate JWT token
 const generateToken = (id, role) => {
-  return jwt.sign(
-    { id, role },
-    process.env.JWT_SECRET || "devsecret",
-    { expiresIn: "1d" }
-  );
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not defined in environment variables");
+  }
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 };
 
-// SIGNUP - hashes password automatically via User model
+// SIGNUP
 export const signup = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    // Validate input
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Check existing user
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // If first user in DB, make admin; otherwise user
+    // First user becomes admin, others are normal users
     const userCount = await User.countDocuments();
     const role = userCount === 0 ? "admin" : "user";
 
-    const user = new User({
-      username,
-      email,
-      password, // hashed automatically
-      role,
-    });
+    const user = new User({ username, email, password, role });
     await user.save();
 
     const token = generateToken(user._id, user.role);
 
     res.status(201).json({
+      success: true,
       message: `User created successfully as ${role}`,
       token,
       user: {
@@ -47,14 +48,19 @@ export const signup = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Signup error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// LOGIN - compares hashed password
+// LOGIN
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
     // Find user
     const user = await User.findOne({ email });
@@ -62,7 +68,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Compare hashed password
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -71,6 +77,7 @@ export const login = async (req, res) => {
     const token = generateToken(user._id, user.role);
 
     res.json({
+      success: true,
       message: "Login successful",
       token,
       user: {
@@ -81,14 +88,18 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// LOGOUT - client removes token
+// LOGOUT
 export const logout = async (req, res) => {
   try {
-    res.json({ message: "Logged out successfully. Please clear token on client." });
+    res.json({
+      success: true,
+      message: "Logged out successfully. Please clear token on client.",
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

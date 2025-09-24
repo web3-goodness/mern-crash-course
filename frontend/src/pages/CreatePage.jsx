@@ -18,7 +18,7 @@ const CreatePage = () => {
 
   const handleAddProduct = async () => {
     // Validation: ensure all fields filled
-    if (!newProduct.name || newProduct.price === "" || !newProduct.image) {
+    if (!newProduct.name.trim() || newProduct.price === "" || !newProduct.image.trim()) {
       toast({
         title: "Error",
         description: "Please fill all fields",
@@ -42,9 +42,9 @@ const CreatePage = () => {
     }
 
     const { success, message } = await createProduct({
-      name: newProduct.name,
+      name: newProduct.name.trim(),
       price: priceValue,
-      image: newProduct.image,
+      image: newProduct.image.trim(),
     });
 
     toast({
@@ -56,7 +56,7 @@ const CreatePage = () => {
 
     if (success) {
       setNewProduct({ name: "", price: "", image: "" });
-      navigate("/"); // redirect to homepage
+      navigate("/home"); // ✅ redirect to HomePage after success
     }
   };
 
@@ -108,7 +108,6 @@ const CreatePage = () => {
 };
 
 export default CreatePage;
-
 
 // import { Container, useColorModeValue,  } from "@chakra-ui/react";
 
