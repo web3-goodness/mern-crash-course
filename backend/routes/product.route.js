@@ -10,8 +10,8 @@ import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", getProducts);              // public
-router.post("/", protect, createProduct);  // protected
+router.get("/", getProducts);
+router.post("/", protect, createProduct);
 router.put("/:pid", protect, updateProduct);
 router.delete("/:pid", protect, deleteProduct);
 

@@ -2,7 +2,7 @@
 import Product from "../models/Product.js";
 import mongoose from "mongoose";
 
-// GET /api/products
+// ================= GET ALL PRODUCTS =================
 export const getProducts = async (req, res) => {
   try {
     const products = await Product.find().populate("owner", "username email role");
@@ -12,33 +12,51 @@ export const getProducts = async (req, res) => {
   }
 };
 
-// POST /api/products
+// ================= CREATE PRODUCT =================
 export const createProduct = async (req, res) => {
   try {
     const { name, price, image } = req.body;
-    if (!name || price == null || !image) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
+
+    // Validate required fields
+    if (!name?.trim() || price == null || !image?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields (name, price, image) are required",
+      });
     }
 
+    // Ensure user is authenticated
     if (!req.user || !req.user._id) {
-      // If protect middleware malfunctioned
-      return res.status(401).json({ success: false, message: "Not authorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    // Validate price
+    const priceValue = parseFloat(price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Price must be a valid number greater than 0",
+      });
     }
 
     const product = await Product.create({
-      name,
-      price,
-      image,
+      name: name.trim(),
+      price: priceValue,
+      image: image.trim(),
       owner: req.user._id,
     });
 
     res.status(201).json({ success: true, data: product });
   } catch (err) {
+    console.error("Create product error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// PUT /api/products/:pid
+// ================= UPDATE PRODUCT =================
 export const updateProduct = async (req, res) => {
   try {
     const { pid } = req.params;
@@ -52,24 +70,37 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Admin can always edit. Owner can edit if product.owner exists.
-    if (!(product.owner && product.owner.toString() === req.user._id.toString()) && req.user.role !== "admin") {
+    // Allow only owner or admin
+    if (
+      !(product.owner && product.owner.toString() === req.user._id.toString()) &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
     const { name, price, image } = req.body;
-    if (name !== undefined) product.name = name;
-    if (price !== undefined) product.price = price;
-    if (image !== undefined) product.image = image;
+    if (name !== undefined) product.name = name.trim();
+    if (price !== undefined) {
+      const priceValue = parseFloat(price);
+      if (isNaN(priceValue) || priceValue <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Price must be a valid number greater than 0",
+        });
+      }
+      product.price = priceValue;
+    }
+    if (image !== undefined) product.image = image.trim();
 
     const updatedProduct = await product.save();
     res.status(200).json({ success: true, data: updatedProduct });
   } catch (err) {
+    console.error("Update product error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// DELETE /api/products/:pid
+// ================= DELETE PRODUCT =================
 export const deleteProduct = async (req, res) => {
   try {
     const { pid } = req.params;
@@ -83,17 +114,21 @@ export const deleteProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    if (!(product.owner && product.owner.toString() === req.user._id.toString()) && req.user.role !== "admin") {
+    // Allow only owner or admin
+    if (
+      !(product.owner && product.owner.toString() === req.user._id.toString()) &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
     await product.deleteOne();
     res.status(200).json({ success: true, message: "Product deleted successfully" });
   } catch (err) {
+    console.error("Delete product error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
 
 // import Product from "../models/product.model.js";
 // import mongoose from "mongoose";
