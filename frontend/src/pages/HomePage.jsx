@@ -17,16 +17,24 @@ const HomePage = () => {
   const { products, fetchProducts } = useProductStore();
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user"));
+
+  // Safe parse user from localStorage
+  let user = null;
+  try {
+    const raw = localStorage.getItem("user");
+    if (raw) user = JSON.parse(raw);
+  } catch (err) {
+    console.error("Error parsing user from localStorage:", err);
+  }
 
   // Load products on mount
   useEffect(() => {
-    const load = async () => {
+    const loadProducts = async () => {
       setLoading(true);
       await fetchProducts();
       setLoading(false);
     };
-    load();
+    loadProducts();
   }, [fetchProducts]);
 
   // Callback to update product in local state after edit

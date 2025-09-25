@@ -1,19 +1,17 @@
 // frontend/src/store/product.js
 import { create } from "zustand";
 
-// Decide base URL:
-// - If VITE_API_URL is set (recommended), use that.
-// - Else in dev use localhost:5000, in production use relative path.
+// Base URL: use localhost in development, relative path in production
 const BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.MODE === "development" ? "http://localhost:5000" : "");
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : ""; // relative path works on Render since frontend + backend are together
 
 const getToken = () => {
   try {
     const raw = localStorage.getItem("user");
     if (!raw) return "";
     const parsed = JSON.parse(raw);
-    // token could be at parsed.token or parsed.data.token depending on backend shape
     return parsed.token || parsed?.data?.token || "";
   } catch {
     return "";
@@ -102,7 +100,6 @@ export const useProductStore = create((set) => ({
     }
   },
 }));
-
 
 // import {create} from "zustand";
 

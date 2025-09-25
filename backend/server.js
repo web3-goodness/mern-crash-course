@@ -19,31 +19,24 @@ const __dirname = path.dirname(__filename);
 app.use(express.json());
 
 // CORS setup
-app.use(
-  cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? process.env.CLIENT_URL
-        : process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true,
-  })
-);
+const clientURL =
+  process.env.NODE_ENV === "production"
+    ? process.env.CLIENT_URL
+    : process.env.CLIENT_URL || "http://localhost:5173";
+
+app.use(cors({ origin: clientURL, credentials: true }));
 
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
-// Test route
-app.get("/api/test", (req, res) =>
-  res.json({ success: true, message: "Backend running" })
-);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   const staticPath = path.join(__dirname, "../frontend/dist");
   app.use(express.static(staticPath));
 
-  // Catch-all for React Router
+  // Catch-all route to serve React for frontend routing
   app.get("", (req, res) => {
     if (req.path.startsWith("/api")) {
       return res
@@ -58,13 +51,15 @@ if (process.env.NODE_ENV === "production") {
 connectDB()
   .then(() => {
     app.listen(PORT, () =>
-      console.log(`🚀 Server started on port ${PORT}`)
+      console.log(`🚀 Server running on port ${PORT}`)
     );
   })
   .catch((err) => {
     console.error("❌ DB connection failed:", err);
     process.exit(1);
   });
+
+  
 
 // // backend/server.js
 // import express from "express";

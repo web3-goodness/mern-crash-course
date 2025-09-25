@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 const CreatePage = () => {
   const [newProduct, setNewProduct] = useState({
     name: "",
-    price: "", // keep as string for controlled input
+    price: "", // controlled input as string
     image: "",
   });
 
@@ -17,46 +17,51 @@ const CreatePage = () => {
   const { createProduct } = useProductStore();
 
   const handleAddProduct = async () => {
-    // Validation: ensure all fields filled
-    if (!newProduct.name.trim() || newProduct.price === "" || !newProduct.image.trim()) {
+    // Trim inputs and validate
+    const name = newProduct.name.trim();
+    const price = newProduct.price.trim();
+    const image = newProduct.image.trim();
+
+    if (!name || !price || !image) {
       toast({
         title: "Error",
-        description: "Please fill all fields",
+        description: "All fields are required",
         status: "error",
+        duration: 3000,
         isClosable: true,
       });
       return;
     }
 
-    const priceValue = parseFloat(newProduct.price);
-
-    // Ensure price is a valid number
+    const priceValue = parseFloat(price);
     if (isNaN(priceValue) || priceValue <= 0) {
       toast({
         title: "Error",
         description: "Price must be a valid number greater than 0",
         status: "error",
+        duration: 3000,
         isClosable: true,
       });
       return;
     }
 
     const { success, message } = await createProduct({
-      name: newProduct.name.trim(),
+      name,
       price: priceValue,
-      image: newProduct.image.trim(),
+      image,
     });
 
     toast({
       title: success ? "Success" : "Error",
       description: message,
       status: success ? "success" : "error",
+      duration: 3000,
       isClosable: true,
     });
 
     if (success) {
       setNewProduct({ name: "", price: "", image: "" });
-      navigate("/home"); // ✅ redirect to HomePage after success
+      navigate("/home"); // go to homepage after creation
     }
   };
 
